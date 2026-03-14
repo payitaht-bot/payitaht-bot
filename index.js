@@ -1,3 +1,15 @@
+const express = require('express');
+const app = express();
+const port = 3000;
+
+app.get('/', (req, res) => {
+  res.send('Bot 7/24 Aktif!');
+});
+
+app.listen(port, () => {
+  console.log(`Bot http://localhost:${port} adresinde dinleniyor.`);
+});
+
 const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField, ChannelType } = require('discord.js');
 
 const client = new Client({
