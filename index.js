@@ -10,7 +10,7 @@ app.listen(port, () => {
   console.log(`Bot http://localhost:${port} adresinde dinleniyor.`);
 });
 
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField, ChannelType } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField, ChannelType, ButtonBuilder, ButtonStyle } = require('discord.js');
 
 const client = new Client({
     intents: [
@@ -54,13 +54,24 @@ client.on('messageCreate', async message => {
 });
 
 // Seçim Yapıldığında Kanal Açma ve Rol Atama
+// Seçim Yapıldığında Kanal Açma, Rol Atama ve Kapat Butonu
 client.on('interactionCreate', async interaction => {
-    if (!interaction.isStringSelectMenu()) return;
+    // Hem seçim menülerini hem de butonları dinle
+    if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
 
-    if (interaction.customId === 'ticket_sec') {
+    // --- 1. TİCKET KAPATMA BUTONU MANTIĞI ---
+    if (interaction.isButton() && interaction.customId === 'ticket_kapat') {
+        await interaction.reply('**Ticket kapatılıyor...** Bu kanal 5 saniye içinde silinecek. 🔒');
+        setTimeout(() => {
+            interaction.channel.delete().catch(() => {});
+        }, 5000);
+        return;
+    }
+
+    // --- 2. TİCKET AÇMA (MENÜ) MANTIĞI ---
+    if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_sec') {
         const secilen = interaction.values[0];
         
-        // --- BURASI DÜZELTİLDİ (Virgüller eklendi) ---
         const rolAyarlari = {
             'nethpot': '1482333901157568563',
             'axe': '1482346288967323688',
@@ -77,7 +88,7 @@ client.on('interactionCreate', async interaction => {
         // Kanal oluştur
         const kanal = await interaction.guild.channels.create({
             name: `${secilen}-${interaction.user.username}`,
-            type: ChannelType.GuildText,
+            type: 0, // 0 = GuildText (Kanal tipi)
             permissionOverwrites: [
                 { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                 { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
@@ -85,9 +96,23 @@ client.on('interactionCreate', async interaction => {
             ],
         });
 
+        // KAPAT BUTONUNU OLUŞTUR
+        const kapatRow = new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+                .setCustomId('ticket_kapat')
+                .setLabel('Ticketi Kapat')
+                .setStyle(ButtonStyle.Danger)
+                .setEmoji('🔒')
+        );
+
         await interaction.reply({ content: `✅ **${secilen}** için kanalın açıldı: ${kanal}`, ephemeral: true });
-        await kanal.send(`Merhaba ${interaction.user}, <@&${hedefRolID}> ekibi seninle ilgilenecek!`);
+
+        // Kanalın içine mesajı ve BUTONU gönder
+        await kanal.send({
+            content: `Merhaba ${interaction.user}, <@&${hedefRolID}> ekibi seninle ilgilenecek!`,
+            components: [kapatRow]
+        });
     }
 });
 
-client.login(process.env.TOKEN); // Buraya tokenını yapıştırmayı unutma!
+client.login(process.env.TOKEN);
