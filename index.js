@@ -10,7 +10,7 @@ app.listen(port, () => {
   console.log(`Bot http://localhost:${port} adresinde dinleniyor.`);
 });
 
-const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField, ChannelType, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder, PermissionsBitField, ChannelType, ButtonBuilder, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
 const client = new Client({
     intents: [
@@ -54,41 +54,65 @@ client.on('messageCreate', async message => {
 });
 
 // Seçim Yapıldığında Kanal Açma ve Rol Atama
-// Seçim Yapıldığında Kanal Açma, Rol Atama ve Kapat Butonu
 client.on('interactionCreate', async interaction => {
-    // Hem seçim menülerini hem de butonları dinle
-    if (!interaction.isStringSelectMenu() && !interaction.isButton()) return;
+    // Menü, Buton ve Form (Modal) etkileşimlerini dinle
+ if (interaction.user.bot) return; // Sadece botları engelle, gerisi geçsin.
 
-    // --- 1. TİCKET KAPATMA BUTONU MANTIĞI ---
+    // --- 1. TİCKET KAPATMA BUTONU ---
     if (interaction.isButton() && interaction.customId === 'ticket_kapat') {
-        await interaction.reply('**Ticket kapatılıyor...** Bu kanal 5 saniye içinde silinecek. 🔒');
-        setTimeout(() => {
-            interaction.channel.delete().catch(() => {});
-        }, 5000);
+        await interaction.reply('**Ticket kapatılıyor...** Kanal 5 saniye içinde silinecek. 🔒');
+        setTimeout(() => interaction.channel.delete().catch(() => {}), 5000);
         return;
     }
 
-    // --- 2. TİCKET AÇMA (MENÜ) MANTIĞI ---
+    // --- 2. SEÇİM MENÜSÜ (FORMU AÇAR) ---
     if (interaction.isStringSelectMenu() && interaction.customId === 'ticket_sec') {
         const secilen = interaction.values[0];
-        
+
+        const modal = new ModalBuilder()
+            .setCustomId(`ticket_modal_${secilen}`)
+            .setTitle('Forza Tierlist | Başvuru Formu');
+
+        const isimInput = new TextInputBuilder()
+            .setCustomId('kullanici_adi')
+            .setLabel("Minecraft Kullanıcı Adı")
+            .setPlaceholder("Minecraft kullanıcı adını gir")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        const sunucuInput = new TextInputBuilder()
+            .setCustomId('test_sunucusu')
+            .setLabel("Test Sunucusu")
+            .setPlaceholder("Örn: zenitmc")
+            .setStyle(TextInputStyle.Short)
+            .setRequired(true);
+
+        modal.addComponents(
+            new ActionRowBuilder().addComponents(isimInput),
+            new ActionRowBuilder().addComponents(sunucuInput)
+        );
+
+        await interaction.showModal(modal);
+    }
+
+    // --- 3. FORM GÖNDERİLDİĞİNDE (KANAL AÇAR) ---
+    if (interaction.isModalSubmit() && interaction.customId.startsWith('ticket_modal_')) {
+        const secilen = interaction.customId.replace('ticket_modal_', '');
+        const mcIsim = interaction.fields.getTextInputValue('kullanici_adi');
+        const sunucuIsim = interaction.fields.getTextInputValue('test_sunucusu');
+
         const rolAyarlari = {
-            'nethpot': '1482333901157568563',
-            'axe': '1482346288967323688',
-            'sword': '1482333903934193755',
-            'diapot': '1482358050026426378',
-            'uhc': '1482333902734491792',
-            'smp': '1482333904869396481',
-            'crystal': '1482333907952205997',
-            'mace': '1482333910711926896'
+            'nethpot': '1482333901157568563', 'axe': '1482346288967323688',
+            'sword': '1482333903934193755', 'diapot': '1482358050026426378',
+            'uhc': '1482333902734491792', 'smp': '1482333904869396481',
+            'crystal': '1482333907952205997', 'mace': '1482333910711926896'
         };
 
         const hedefRolID = rolAyarlari[secilen];
 
-        // Kanal oluştur
         const kanal = await interaction.guild.channels.create({
             name: `${secilen}-${interaction.user.username}`,
-            type: 0, // 0 = GuildText (Kanal tipi)
+            type: 0,
             permissionOverwrites: [
                 { id: interaction.guild.id, deny: [PermissionsBitField.Flags.ViewChannel] },
                 { id: interaction.user.id, allow: [PermissionsBitField.Flags.ViewChannel, PermissionsBitField.Flags.SendMessages] },
@@ -96,20 +120,14 @@ client.on('interactionCreate', async interaction => {
             ],
         });
 
-        // KAPAT BUTONUNU OLUŞTUR
         const kapatRow = new ActionRowBuilder().addComponents(
-            new ButtonBuilder()
-                .setCustomId('ticket_kapat')
-                .setLabel('Ticketi Kapat')
-                .setStyle(ButtonStyle.Danger)
-                .setEmoji('🔒')
+            new ButtonBuilder().setCustomId('ticket_kapat').setLabel('Ticketi Kapat').setStyle(ButtonStyle.Danger).setEmoji('🔒')
         );
 
-        await interaction.reply({ content: `✅ **${secilen}** için kanalın açıldı: ${kanal}`, ephemeral: true });
+        await interaction.reply({ content: `✅ Kanalın açıldı: ${kanal}`, ephemeral: true });
 
-        // Kanalın içine mesajı ve BUTONU gönder
         await kanal.send({
-            content: `Merhaba ${interaction.user}, <@&${hedefRolID}> ekibi seninle ilgilenecek!`,
+            content: `Merhaba ${interaction.user}, <@&${hedefRolID}> ekibi seninle ilgilenecek!\n\n**BAŞVURU BİLGİLERİ:**\n> **Minecraft Adı:** ${mcIsim}\n> **Sunucu:** ${sunucuIsim}`,
             components: [kapatRow]
         });
     }
