@@ -71,7 +71,7 @@ client.on('interactionCreate', async interaction => {
 
         const modal = new ModalBuilder()
             .setCustomId(`ticket_modal_${secilen}`)
-            .setTitle('Forza Tierlist | Başvuru Formu');
+            .setTitle('Payitaht Tierlist | Test Başvuru Formu');
 
         const isimInput = new TextInputBuilder()
             .setCustomId('kullanici_adi')
@@ -83,7 +83,7 @@ client.on('interactionCreate', async interaction => {
         const sunucuInput = new TextInputBuilder()
             .setCustomId('test_sunucusu')
             .setLabel("Test Sunucusu")
-            .setPlaceholder("Örn: zenitmc")
+            .setPlaceholder("Örn: trpvp.club")
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
