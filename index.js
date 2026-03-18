@@ -43,9 +43,9 @@ client.on('messageCreate', async message => {
                         { label: 'sword', description: 'Sword kitinde test olmak için tıkla', value: 'sword' },
                         { label: 'diapot', description: 'Diapot kitinde test olmak için tıkla', value: 'diapot' },
                         { label: 'uhc', description: 'UHC kitinde test olmak için tıkla', value: 'uhc' },
-                        { label: 'SMP', description: 'UHC kitinde test olmak için tıkla', value: 'smp' },
-                        { label: 'CRYSTAL', description: 'UHC kitinde test olmak için tıkla', value: 'crystal' },
-                        { label: 'MACE', description: 'UHC kitinde test olmak için tıkla', value: 'mace' },
+                        { label: 'SMP', description: 'SMP kitinde test olmak için tıkla', value: 'smp' },
+                        { label: 'CRYSTAL', description: 'CRYSTAL kitinde test olmak için tıkla', value: 'crystal' },
+                        { label: 'MACE', description: 'MACE kitinde test olmak için tıkla', value: 'mace' },
                     ]),
             );
 
