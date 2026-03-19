@@ -2,15 +2,16 @@ const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder
 const express = require('express');
 
 const app = express();
+const port = process.env.PORT || 3000;
 app.get('/', (req, res) => res.send('Payitaht Destek Sistemi Aktif!'));
-app.listen(process.env.PORT || 3000);
+app.listen(port, () => console.log(`Port dinleniyor: ${port}`));
 
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-// --- AYARLAR: SADECE SİLİNECEK WAITLIST ROL IDLERI ---
-const WAITLIST_ROLES = 
+// --- GÜNCEL AYARLAR: GÖRSELDEKİ YENİ ROL IDLERİ ---
+const WAITLIST_ROLES = {
     'nethpot': '1484133633399853178',
     'axe': '1484133827931541544',
     'sword': '1484133760613093399',
@@ -21,15 +22,15 @@ const WAITLIST_ROLES =
 };
 
 client.once(Events.ClientReady, () => {
-    console.log(`✅ ${client.user.tag} Giriş Yaptı!`);
+    console.log(`✅ ${client.user.tag} Hazır!`);
 });
 
-// --- MENÜ KURULUMU ---
+// --- MENÜ KURULUMU (!destek-kur) ---
 client.on(Events.MessageCreate, async message => {
     if (message.content === '!destek-kur' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         const embed = new EmbedBuilder()
             .setTitle('🛡️ PAYİTAHT TİERLİST | TEST BAŞVURU')
-            .setDescription('Test olmak istediğiniz kitleri aşağıdan seçebilirsiniz.\n\n🗑️ **Waitlistten Çıkmak İçin:** En alttaki temizleme butonunu kullanın.')
+            .setDescription('Test olmak istediğiniz kitleri aşağıdan seçerek ilgili **Waitlist** rollerini alabilirsiniz.\n\n🗑️ **Waitlistten Çıkmak İçin:** En alttaki temizleme butonunu kullanın.')
             .setColor(0x2b2d31)
             .setFooter({ text: 'Payitaht Tierlist • Rol Sistemi' });
 
@@ -54,10 +55,11 @@ client.on(Events.MessageCreate, async message => {
     }
 });
 
-// --- ETKİLEŞİMLER ---
+// --- BUTON ETKİLEŞİMLERİ ---
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
+    // "Komut güncel değil" hatasını önlemek için
     await interaction.deferReply({ ephemeral: true });
 
     const member = interaction.member;
@@ -65,14 +67,13 @@ client.on(Events.InteractionCreate, async interaction => {
     const tumWaitlistIDleri = Object.values(WAITLIST_ROLES);
 
     try {
-        // --- SADECE WAITLIST ROLLERİNİ SİLER ---
+        // --- SADECE WAITLISTLERİ SİL ---
         if (customId === 'role_clear_waitlists') {
-            // Sadece yukarıda ID'si verilen rolleri hedef alır
             await member.roles.remove(tumWaitlistIDleri).catch(() => {});
-            return await interaction.editReply({ content: '✅ Üzerindeki tüm bekleme listesi (Waitlist) rolleri temizlendi. Diğer rollerine dokunulmadı.' });
+            return await interaction.editReply({ content: '✅ Tüm waitlist rollerin başarıyla temizlendi.' });
         }
 
-        // --- KİT ROLÜ VERME ---
+        // --- KİT ROLÜ VER ---
         const kit = customId.replace('role_', '');
         const targetRoleId = WAITLIST_ROLES[kit];
 
@@ -85,7 +86,7 @@ client.on(Events.InteractionCreate, async interaction => {
 
     } catch (error) {
         console.error("Hata:", error);
-        return await interaction.editReply({ content: '❌ Rol işlemi başarısız. Botun yetkisi yetmiyor olabilir.' });
+        return await interaction.editReply({ content: '❌ Rol verilemedi. Botun rolünün, verilen rollerden üstte olduğundan emin ol.' });
     }
 });
 
