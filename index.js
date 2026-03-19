@@ -16,9 +16,8 @@ const client = new Client({
 
 // --- AYARLAR ---
 const TOKEN = process.env.TOKEN;
-const CLIENT_ID = "1482339287717642290"; // Buraya botunun ID'sini yazmalısın
+const CLIENT_ID = "BOT_ID_BURAYA"; // Botun ID'sini buraya yapıştır
 
-// Senin paylaştığın koddaki güncel ID'ler aktarıldı
 const KIT_ROLLER = {
     nethpot: "1484133633399853178",
     axe: "1484133827931541544",
@@ -37,23 +36,21 @@ const commands = [{
 
 const rest = new REST({ version: '10' }).setToken(TOKEN);
 (async () => {
-    try { 
-        await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands }); 
-    } catch (e) { console.error("Komut kaydedilirken hata:", e); }
+    try { await rest.put(Routes.applicationCommands(CLIENT_ID), { body: commands }); } catch (e) { console.error(e); }
 })();
 
 client.once(Events.ClientReady, () => {
-    console.log(`✅ ${client.user.tag} hazır ve ID'ler yüklendi!`);
+    console.log(`✅ ${client.user.tag} hazır! Temizleme sistemi eklendi.`);
 });
 
 client.on(Events.InteractionCreate, async (i) => {
-    // Kurulum Komutu (/kur-waitlist)
+    // Kurulum Komutu
     if (i.isChatInputCommand() && i.commandName === 'kur-waitlist') {
         if (!i.member.permissions.has('Administrator')) return i.reply({ content: "❌ Yetkin yok!", ephemeral: true });
 
         const embed = new EmbedBuilder()
             .setTitle('🛡️ PAYİTAHT TİERLİST | TEST KAYIT')
-            .setDescription('Aşağıdaki butonlara tıklayarak istediğiniz kitin **Waitlist** rolünü alabilirsiniz.')
+            .setDescription('Test sırasına girmek için kit butonlarına, tüm sıralardan çıkmak için kırmızı butona tıklayınız.')
             .setColor(0x5865F2);
 
         const row1 = new ActionRowBuilder().addComponents(
@@ -66,13 +63,15 @@ client.on(Events.InteractionCreate, async (i) => {
         const row2 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('role_crystal').setLabel('Crystal').setStyle(ButtonStyle.Primary).setEmoji('💎'),
             new ButtonBuilder().setCustomId('role_mace').setLabel('Mace').setStyle(ButtonStyle.Primary).setEmoji('🔨'),
-            new ButtonBuilder().setCustomId('role_smp').setLabel('SMP').setStyle(ButtonStyle.Primary).setEmoji('🟢')
+            new ButtonBuilder().setCustomId('role_smp').setLabel('SMP').setStyle(ButtonStyle.Primary).setEmoji('🟢'),
+            // KIRMIZI TEMİZLEME BUTONU
+            new ButtonBuilder().setCustomId('clear_all_waitlist').setLabel('Sıraları Temizle').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
         );
 
         await i.reply({ embeds: [embed], components: [row1, row2] });
     }
 
-    // Rol Verme Buton İşlemi
+    // Tekli Rol Verme İşlemi
     if (i.isButton() && i.customId.startsWith('role_')) {
         const kit = i.customId.replace('role_', '');
         const roleId = KIT_ROLLER[kit];
@@ -86,7 +85,20 @@ client.on(Events.InteractionCreate, async (i) => {
                 return i.reply({ content: `✅ **${kit.toUpperCase()}** sırasına katıldınız!`, ephemeral: true });
             }
         } catch (error) {
-            i.reply({ content: '❌ Rol verilemedi! Botun rolü sunucu ayarlarında en üstte olmalıdır.', ephemeral: true });
+            i.reply({ content: '❌ Rol hatası! Bot yetkisini kontrol et.', ephemeral: true });
+        }
+    }
+
+    // TÜM ROLLERİ TEMİZLEME İŞLEMİ
+    if (i.isButton() && i.customId === 'clear_all_waitlist') {
+        const roller = Object.values(KIT_ROLLER); // Sadece yukarıdaki kit ID'lerini alır
+        
+        try {
+            await i.member.roles.remove(roller);
+            return i.reply({ content: '🗑️ Tüm test sıralarından başarıyla ayrıldınız ve rolleriniz temizlendi.', ephemeral: true });
+        } catch (error) {
+            console.error(error);
+            i.reply({ content: '❌ Roller temizlenirken bir hata oluştu!', ephemeral: true });
         }
     }
 });
