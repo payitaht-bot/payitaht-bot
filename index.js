@@ -9,8 +9,8 @@ const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent]
 });
 
-// --- AYARLAR: GÜNCEL WAITLIST ROL IDLERI ---
-const WAITLIST_ROLES = {
+// --- AYARLAR: SADECE SİLİNECEK WAITLIST ROL IDLERI ---
+const WAITLIST_ROLES = 
     'nethpot': '1484133633399853178',
     'axe': '1484133827931541544',
     'sword': '1484133760613093399',
@@ -21,15 +21,15 @@ const WAITLIST_ROLES = {
 };
 
 client.once(Events.ClientReady, () => {
-    console.log(`✅ ${client.user.tag} Hazır!`);
+    console.log(`✅ ${client.user.tag} Giriş Yaptı!`);
 });
 
-// --- DESTEK MENÜSÜ KURULUMU (!destek-kur) ---
+// --- MENÜ KURULUMU ---
 client.on(Events.MessageCreate, async message => {
     if (message.content === '!destek-kur' && message.member.permissions.has(PermissionsBitField.Flags.Administrator)) {
         const embed = new EmbedBuilder()
             .setTitle('🛡️ PAYİTAHT TİERLİST | TEST BAŞVURU')
-            .setDescription('Test olmak istediğiniz kitleri aşağıdan seçebilirsiniz.\nİstediğiniz kadar kiti seçip bekleme listelerine katılabilirsiniz.')
+            .setDescription('Test olmak istediğiniz kitleri aşağıdan seçebilirsiniz.\n\n🗑️ **Waitlistten Çıkmak İçin:** En alttaki temizleme butonunu kullanın.')
             .setColor(0x2b2d31)
             .setFooter({ text: 'Payitaht Tierlist • Rol Sistemi' });
 
@@ -47,50 +47,45 @@ client.on(Events.MessageCreate, async message => {
 
         const row3 = new ActionRowBuilder().addComponents(
             new ButtonBuilder().setCustomId('role_smp').setLabel('SMP').setStyle(ButtonStyle.Primary).setEmoji('🌍'),
-            new ButtonBuilder().setCustomId('role_clear').setLabel('Tümünü Temizle').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
+            new ButtonBuilder().setCustomId('role_clear_waitlists').setLabel('Waitlistleri Temizle').setStyle(ButtonStyle.Danger).setEmoji('🗑️')
         );
 
         await message.channel.send({ embeds: [embed], components: [row1, row2, row3] });
     }
 });
 
-// --- BUTON ETKİLEŞİM YÖNETİMİ ---
+// --- ETKİLEŞİMLER ---
 client.on(Events.InteractionCreate, async interaction => {
     if (!interaction.isButton()) return;
 
-    // Hata önleyici deferReply (ephemeral: sadece kullanıcı görür)
     await interaction.deferReply({ ephemeral: true });
 
     const member = interaction.member;
     const customId = interaction.customId;
+    const tumWaitlistIDleri = Object.values(WAITLIST_ROLES);
 
     try {
-        // Rolleri Temizle Butonu
-        if (customId === 'role_clear') {
-            const allWaitlistRoles = Object.values(WAITLIST_ROLES);
-            await member.roles.remove(allWaitlistRoles).catch(() => {});
-            return await interaction.editReply({ content: '✅ Üzerindeki tüm waitlist rolleri temizlendi.' });
+        // --- SADECE WAITLIST ROLLERİNİ SİLER ---
+        if (customId === 'role_clear_waitlists') {
+            // Sadece yukarıda ID'si verilen rolleri hedef alır
+            await member.roles.remove(tumWaitlistIDleri).catch(() => {});
+            return await interaction.editReply({ content: '✅ Üzerindeki tüm bekleme listesi (Waitlist) rolleri temizlendi. Diğer rollerine dokunulmadı.' });
         }
 
-        // Kit Rolü Verme (Eski roller silinmez)
+        // --- KİT ROLÜ VERME ---
         const kit = customId.replace('role_', '');
         const targetRoleId = WAITLIST_ROLES[kit];
 
-        // Eğer oyuncuda zaten bu rol varsa bilgilendir
         if (member.roles.cache.has(targetRoleId)) {
-            return await interaction.editReply({ content: `⚠️ Zaten **${kit.toUpperCase()} Waitlist** rolüne sahipsin.` });
+            return await interaction.editReply({ content: `⚠️ Zaten **${kit.toUpperCase()}** bekleme listesindesin.` });
         }
 
-        // Rolü ver
         await member.roles.add(targetRoleId);
-
-        return await interaction.editReply({ 
-            content: `✅ **${kit.toUpperCase()} Waitlist** rolü başarıyla eklendi!` 
-        });
+        return await interaction.editReply({ content: `✅ **${kit.toUpperCase()} Waitlist** rolü verildi!` });
 
     } catch (error) {
         console.error("Hata:", error);
-        return await interaction.editReply({ content: '❌ İşlem yapılamadı. Botun yetkilerini kontrol edin!' });
+        return await interaction.editReply({ content: '❌ Rol işlemi başarısız. Botun yetkisi yetmiyor olabilir.' });
     }
 });
 
